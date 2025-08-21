@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class UnitDragController : MonoBehaviour
 {
@@ -99,16 +100,33 @@ public class UnitDragController : MonoBehaviour
         Collider2D hit = Physics2D.OverlapPoint(worldPos);
         if (hit != null && hit.TryGetComponent<UnitGenerator>(out var targetBase) && targetBase != unitGenerator)
         {
-            int unitsToSend = 1;
-            if (unitGenerator.TrySendUnits(unitsToSend))
+            int unitsToSend = unitGenerator.CurrentUnits;
+
+            if (unitsToSend > 0 && unitGenerator.TrySendUnits(unitsToSend))
             {
-                Transform unitIcon = Instantiate(unitIconPrefab, transform.position, Quaternion.identity);
-                StartCoroutine(UnitIconMover.MoveUnitToTarget(unitIcon, targetBase.transform.position, () =>
-                {
-                    targetBase.AddUnits(unitsToSend);
-                    Destroy(unitIcon.gameObject);
-                }));
+                StartCoroutine(SendUnitsRoutine(unitsToSend, targetBase));
             }
+        }
+    }
+    private IEnumerator SendUnitsRoutine(int unitsToSend, UnitGenerator targetBase)
+    {
+        Vector3 startPos = transform.position;
+        Vector3 dir = (targetBase.transform.position - startPos).normalized;
+        Vector3 spawnPos = startPos + dir * 0.5f;
+
+        float delay = 0.1f; // 유닛 간 출발 간격 (조절 가능)
+
+        for (int i = 0; i < unitsToSend; i++)
+        {
+            Transform unitIcon = Instantiate(unitIconPrefab, spawnPos, Quaternion.identity);
+
+            StartCoroutine(UnitIconMover.MoveUnitToTarget(unitIcon, targetBase.transform.position, () =>
+            {
+                targetBase.ReceiveUnit(unitGenerator.Owner, 1);
+                Destroy(unitIcon.gameObject);
+            }));
+
+            yield return new WaitForSeconds(delay); // 다음 유닛은 조금 늦게 출발
         }
     }
 }
