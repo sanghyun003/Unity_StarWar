@@ -1,11 +1,11 @@
 using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class UnitGenerator : MonoBehaviour
 {
-    [SerializeField] private int currentUnits = 0; //외부에서 수정불가
-    public int CurrentUnits => currentUnits;       //외부에서 읽기 전용
+    [SerializeField] private int currentUnits = 0;
+    public int CurrentUnits => currentUnits;
+
     [SerializeField] private float productionInterval = 0.5f;
     [SerializeField] private int unitsPerInterval = 1;
     private float currentInterval;
@@ -13,6 +13,10 @@ public class UnitGenerator : MonoBehaviour
     public UnitUIController uiController;
 
     public BaseOwner Owner = BaseOwner.Neutral;
+
+    [Header("Owner Colors (set in Inspector)")]
+    public Color playerColor;
+    public Color enemyColor;
 
     private void Start()
     {
@@ -23,10 +27,9 @@ public class UnitGenerator : MonoBehaviour
 
     IEnumerator ProduceUnits()
     {
-        while (gameObject.activeInHierarchy)
+        while (enabled)
         {
             yield return new WaitForSeconds(currentInterval);
-            
             if (Owner != BaseOwner.Neutral)
             {
                 currentUnits += unitsPerInterval;
@@ -54,17 +57,23 @@ public class UnitGenerator : MonoBehaviour
 
     public void ReceiveUnit(BaseOwner incomingOwner, int amount = 1)
     {
+        Color ownerColor = incomingOwner == BaseOwner.Player ? playerColor : enemyColor;
         if (Owner == BaseOwner.Neutral)
         {
             Owner = incomingOwner;
             currentUnits = amount;
 
+            // 중립 점령 시 주인 색으로 변경
+            if (uiController != null)
+            {
+                uiController.SetOwnerColor(ownerColor);
+            }
+
             currentInterval = productionInterval * 2;
-
             UpdateUnitUI();
-
             return;
         }
+
         if (Owner == incomingOwner)
         {
             AddUnits(amount);
@@ -75,8 +84,9 @@ public class UnitGenerator : MonoBehaviour
             if (currentUnits <= 0)
             {
                 Owner = incomingOwner;
-                currentUnits = 1; // 점령 후 최소 1 유닛
-                currentInterval = productionInterval;
+                currentUnits = 1;
+                currentInterval = productionInterval *2;
+                uiController.SetOwnerColor(ownerColor);
             }
             UpdateUnitUI();
         }
@@ -85,9 +95,34 @@ public class UnitGenerator : MonoBehaviour
     private void UpdateUnitUI()
     {
         uiController?.UpdateUnitCount(currentUnits);
-        uiController?.UpdateBaseColor(Owner);
+
+        if (Owner == BaseOwner.Neutral) uiController?.SetNeutralColor();
     }
+    
+    public void ResetBase(BaseOwner initialOwner, int initialUnits)
+    {
+        Owner = initialOwner;
+        currentUnits = initialUnits;
+
+        // 생산 간격 초기화
+        currentInterval = productionInterval;
+
+        // UI 초기화
+        if (uiController != null)
+        {
+            if (Owner == BaseOwner.Neutral)
+                uiController.SetNeutralColor();
+            else if (Owner == BaseOwner.Player)
+                uiController.SetOwnerColor(playerColor);
+            else if (Owner == BaseOwner.Enemy)
+                uiController.SetOwnerColor(enemyColor);
+
+            uiController.UpdateUnitCount(currentUnits);
+        }
+    }
+
 }
+
 public enum BaseOwner
 {
     Player,

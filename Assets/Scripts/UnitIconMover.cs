@@ -3,8 +3,8 @@ using UnityEngine;
 
 public static class UnitIconMover
 {
-    [SerializeField] private static float moveSpeed = 5f;
-    [SerializeField] private static float arrivalThreshold = 0.05f;
+    private static float moveSpeed = 5f;
+    private static float arrivalThreshold = 0.05f;
 
     public static IEnumerator MoveUnitToTarget(Transform unitImage, Vector3 targetPos, System.Action onArrive)
     {

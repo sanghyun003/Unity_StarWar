@@ -9,7 +9,7 @@ public class UnitDragController : MonoBehaviour
     [SerializeField] private Color lineActiveColor = Color.green;
 
     [Header("Unit Icon")]
-    [SerializeField] private Transform unitIconPrefab;
+    [SerializeField] private Transform[] unitIconPrefab;
 
     private LineRenderer lineRenderer;
     private Camera mainCamera;
@@ -104,11 +104,11 @@ public class UnitDragController : MonoBehaviour
 
             if (unitsToSend > 0 && unitGenerator.TrySendUnits(unitsToSend))
             {
-                StartCoroutine(SendUnitsRoutine(unitsToSend, targetBase));
+                StartCoroutine(SendUnitsRoutine(unitsToSend, targetBase,unitGenerator.Owner));
             }
         }
     }
-    private IEnumerator SendUnitsRoutine(int unitsToSend, UnitGenerator targetBase)
+    private IEnumerator SendUnitsRoutine(int unitsToSend, UnitGenerator targetBase, BaseOwner owner)
     {
         Vector3 startPos = transform.position;
         Vector3 dir = (targetBase.transform.position - startPos).normalized;
@@ -118,14 +118,18 @@ public class UnitDragController : MonoBehaviour
 
         for (int i = 0; i < unitsToSend; i++)
         {
-            Transform unitIcon = Instantiate(unitIconPrefab, spawnPos, Quaternion.identity);
+            int k = 0;
+            if (owner == BaseOwner.Player) k = 0;
+            else k = 1;
+
+            Transform unitIcon = Instantiate(unitIconPrefab[k], spawnPos, Quaternion.identity);
 
             StartCoroutine(UnitIconMover.MoveUnitToTarget(unitIcon, targetBase.transform.position, () =>
             {
                 targetBase.ReceiveUnit(unitGenerator.Owner, 1);
                 Destroy(unitIcon.gameObject);
             }));
-
+ 
             yield return new WaitForSeconds(delay); // 다음 유닛은 조금 늦게 출발
         }
     }
